@@ -4,18 +4,21 @@ An interactive developer portfolio built from the original `3d_oriental_map_deve
 
 The live scene uses original Blender miniatures inspired by Vietnamese architecture: One Pillar Pagoda, Khue Van Pavilion, Hue imperial gates, Hoi An shophouses, and a garden house. Curved tiled roofs, railings, shutters, silk lanterns, lotus flowers, bamboo, branching trees and limestone karsts replace the primitive buildings. These are stylized interpretations, not measured heritage reconstructions.
 
-Justin's profile occupies Khue Van Pavilion in the center; the interface station uses One Pillar Pagoda in the western garden. The terrain combines original parchment and walnut textures, contour engraving, a jade stream, a stone bridge, and raised foundations. Regenerate terrain textures with `python scripts/paint-terrain.py` (Pillow).
+Justin's profile occupies Khue Van Pavilion in the center; the interface station uses One Pillar Pagoda in the western garden. The terrain combines original parchment and walnut textures, contour engraving, a jade stream, a stone bridge, and raised foundations. Six graded paths use chamfered stone pavers, earth bedding and grass margins, connecting entrances to the bridge and foreground house. Regenerate terrain textures with `python scripts/paint-terrain.py` (Pillow).
+
+Limestone formations use rounded shoulders, erosion grooves, smooth vertex tints, cliff ferns and vines. Both corner decorations are transparent Blender renders using the scene's folded leaves and small blossoms, with pink flowers at the upper left and golden flowers at the lower right.
 
 Lighting defaults to the current time in `Asia/Ho_Chi_Minh`, blending dawn, daylight, sunset and night rather than jumping between presets. The clock button returns to automatic lighting after choosing a manual preview.
 
 Small curved 3D petals tumble in world space, land on the actual map or building surfaces, remain for 3–6 seconds, then fade over 1.4 seconds. All 56 petals share one instanced draw call. The notched silhouette is inspired by the [godhitech-women-day reference](https://github.com/neyugn-yuh/godhitech-women-day/tree/acdfee162f3eb1e1405d4f8c3920cc652e3bfd9c). The flower button controls the effect; reduced-motion preference disables it initially and visitors can opt in.
 
-`assets/models/vietnam-models.js` contains native Three.js ObjectLoader geometry. Models share materials and merge meshes by material: 213,468 triangles across all five stations and their surroundings, with 102 model draw calls. Tree canopies use individual folded leaves, forked branches, bark grooves, and small five-petal blossoms instead of sphere clusters. Quantized millimeter positions and normalized byte normals keep the detailed asset compact. Thumbnail art is rendered from the same Blender models.
+`assets/models/vietnam-models.js` contains native Three.js ObjectLoader geometry. Models share materials and merge meshes by material: 230,550 triangles across all five stations and their surroundings, with 102 model draw calls. Tree canopies use individual folded leaves, forked branches, bark grooves, and small five-petal blossoms instead of sphere clusters. Quantized millimeter positions and normalized byte normals keep the detailed asset compact. Thumbnail art is rendered from the same Blender models.
 
 To rebuild assets, use Blender 5.2 and Python with Pillow for thumbnail conversion:
 
 ```sh
 blender --background --factory-startup --python scripts/build-vietnam.py -- --output-dir work
+blender --background work/linh-canh-vietnam.blend --python scripts/refine-landscape.py -- --output-dir work
 python scripts/pack-vietnam.py
 ```
 

@@ -103,6 +103,7 @@ test('complete scene builds all five stations and supports every lighting mode',
   assert.equal(vm.runInContext('stationMap.uxui.group.position.x',context),.4);
   assert.equal(vm.runInContext('stationMap.uxui.group.position.z',context),.2);
   assert.ok(vm.runInContext("scene.getObjectByName('parchment-terrain') !== undefined",context));
+  assert.ok(vm.runInContext("scene.getObjectByName('stone-walkways').count > 200 && scene.getObjectByName('stone-walkways').instanceMatrix.array.every(Number.isFinite)",context));
   context.togglePetals();assert.equal(document.body.classList.contains('petals-enabled'),false);
   context.togglePetals();assert.equal(document.body.classList.contains('petals-enabled'),true);
   for (const mode of ['day', 'sunset', 'night']) context.setAtmosphere(mode);
@@ -158,6 +159,8 @@ test('Blender models retain millimeter bounds, valid indices and a bounded rende
         if (!mesh.isMesh) return;
         calls++;
         const { position, normal } = mesh.geometry.attributes;
+        const color=mesh.geometry.attributes.color;
+        if(color && (!color.normalized || !color.array.every(Number.isFinite))) throw Error(id + ': invalid vertex colors');
         if (!position.array.every(Number.isFinite) || !normal.array.every(Number.isFinite)) throw Error(id + ': invalid vertex');
         if (!mesh.geometry.index.array.every(i => i < position.count)) throw Error(id + ': invalid index');
         if (!normal.normalized) throw Error(id + ': missing normal normalization');
@@ -169,7 +172,7 @@ test('Blender models retain millimeter bounds, valid indices and a bounded rende
     ({models, triangles, calls});
   `, context);
   assert.ok(result.calls <= 105);
-  assert.ok(result.triangles < 230000);
+  assert.ok(result.triangles < 235000);
   for (const model of result.models.slice(0,5)) {
     assert.ok(model.x > 1 && model.x < 4, model.id);
     assert.ok(model.y > 1 && model.y < 3.6, model.id);

@@ -379,7 +379,6 @@
         let mapRootGroup;
         let stationMeshes = []; // Clickable 3D station groups
         let stationMap = {};    // id -> { group, labelEl, auraRing, data, baseScale }
-        let steppingStones = [];
         let firefliesSystem,petalsEnabled,petalField;
         let lanternPointLights = [];
         let waterMesh, celestialWheelGroup;
@@ -584,42 +583,58 @@
             mapRootGroup.add(bridge);
         }
 
-        // 2. Build Curved Dotted Stepping Stone Paths Connecting Stations
         function buildSteppingStonePaths() {
-            const pathPairs = [
-                // Visual -> Graphic
-                [new THREE.Vector3(-4.2, 0.08, -2.5), new THREE.Vector3(-4.8, 0.08, 0.0), new THREE.Vector3(-3.8, 0.08, 2.2)],
-                // Graphic -> Central UX/UI
-                [new THREE.Vector3(-3.6, 0.08, 2.2), new THREE.Vector3(-1.8, 0.08, 1.5), new THREE.Vector3(0.2, 0.08, 0.4)],
-                // Central UX/UI -> System
-                [new THREE.Vector3(0.6, 0.08, 0.0), new THREE.Vector3(2.6, 0.08, -1.6), new THREE.Vector3(4.5, 0.08, -2.9)],
-                // Central UX/UI -> Contact
-                [new THREE.Vector3(0.6, 0.08, 0.5), new THREE.Vector3(2.2, 0.08, 2.1), new THREE.Vector3(4.1, 0.08, 2.5)],
-                // Graphic -> Bottom Portfolio Entrance
-                [new THREE.Vector3(-3.8, 0.08, 2.4), new THREE.Vector3(-2.4, 0.08, 3.6), new THREE.Vector3(-0.6, 0.08, 3.4)]
+            const at=id=>STATIONS_DATA.find(station=>station.id===id).position;
+            const profile=at('uxui'),garden=at('visual'),gate=at('system'),market=at('graphic'),home=at('contact');
+            const floor=p=>Math.max(.025,p.y-.10);
+            const routes=[
+                {points:[[garden.x,garden.z+1.7],[-4.95,-.45],[-5.5,.65],[-5.5,2.8],[-4.7,3.55],[market.x,market.z+1.3]],a:floor(garden),b:floor(market)},
+                {points:[[market.x,market.z+1.3],[-2.75,2.6],[-2.35,1.4],[-1.15,.6],[-.4,1.08],[profile.x,profile.z+1.35]],a:floor(market),b:floor(profile)},
+                {points:[[profile.x+1.25,profile.z+.05],[2.5,-.55],[3.55,-1.45],[gate.x,gate.z+1.1]],a:floor(profile),b:floor(gate)},
+                {points:[[profile.x+1.2,profile.z+.45],[2.28,1.3],[2.35,2.9],[3.25,3.8],[home.x,home.z+1.3]],a:floor(profile),b:floor(home)},
+                {points:[[market.x,market.z+1.3],[-3.1,4.3],[-2.1,4.8],[-.1,4.95]],a:floor(market),b:.025},
+                {points:[[market.x,market.z+1.3],[-4.75,4.5],[-5.7,4.8],[-6.1,4.72]],a:floor(market),b:.025},
             ];
-
-            const stoneGeo = new THREE.CylinderGeometry(0.14, 0.16, 0.07, 8);
-            pathPairs.forEach((pts, curveIdx) => {
-                const curve = new THREE.QuadraticBezierCurve3(pts[0], pts[1], pts[2]);
-                const numStones = 16;
-                for (let i = 1; i < numStones; i++) {
-                    const t = i / numStones;
-                    const pos = curve.getPoint(t);
-                    const stoneMat = new THREE.MeshStandardMaterial({
-                        color: 0xd9cbb8,
-                        emissive: 0xf59e0b,
-                        emissiveIntensity: 0.05,
-                        roughness: 0.7
-                    });
-                    const stone = new THREE.Mesh(stoneGeo, stoneMat);
-                    stone.position.copy(pos);
-                    stone.rotation.y = (i * 0.7);
-                    stone.receiveShadow = true;
-                    mapRootGroup.add(stone);
-                    steppingStones.push({ mesh: stone, phase: i * 0.35 + curveIdx });
+            const material=color=>new THREE.MeshStandardMaterial({color:new THREE.Color(color).convertSRGBToLinear(),roughness:.96});
+            const grass=material('#889268'),earth=material('#8e8066'),grout=material('#695e4c');
+            const tiles=[];
+            const smooth=t=>{t=THREE.MathUtils.clamp(t,0,1);return t*t*(3-2*t);};
+            const bridgeLocal=p=>({x:(p.x+1.75)*Math.cos(.58)-(p.z-1)*Math.sin(.58),z:(p.x+1.75)*Math.sin(.58)+(p.z-1)*Math.cos(.58)});
+            for(const route of routes){
+                const curve=new THREE.CatmullRomCurve3(route.points.map(([x,z])=>new THREE.Vector3(x,0,z)));
+                const height=(t,p)=>{
+                    const bridge=bridgeLocal(p),ramp=Math.abs(bridge.z)<.40&&Math.abs(bridge.x)<1.2 ? .17*Math.exp(-(((Math.abs(bridge.x)-.78)/.36)**2)) : 0;
+                    return .023+(route.a-.025)*(1-smooth(t/.22))+(route.b-.025)*smooth((t-.78)/.22)+ramp;
+                };
+                const ribbon=(width,raise,mat,name)=>{
+                    const positions=[],indices=[];
+                    for(let i=0;i<=72;i++){
+                        const t=i/72,p=curve.getPointAt(t),tangent=curve.getTangentAt(t),normal=new THREE.Vector3(-tangent.z,0,tangent.x).normalize().multiplyScalar(width/2),y=height(t,p)+raise;
+                        positions.push(p.x+normal.x,y,p.z+normal.z,p.x-normal.x,y,p.z-normal.z);
+                        if(i<72){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3);}
+                    }
+                    const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setIndex(indices);geometry.computeVertexNormals();
+                    const mesh=new THREE.Mesh(geometry,mat);mesh.name=name;mesh.receiveShadow=true;mapRootGroup.add(mesh);return mesh;
+                };
+                ribbon(.58,0,grass,'walkway-grass');ribbon(.44,.008,earth,'walkway-bed');ribbon(.34,.012,grout,'walkway-grout');
+                const landing=ribbon(.34,.058,new THREE.MeshStandardMaterial({visible:false}),'walkway-landing');landing.userData.petalSurface=true;
+                const steps=Math.ceil(curve.getLength()/.215);
+                for(let i=0;i<=steps;i++){
+                    const t=i/steps,p=curve.getPointAt(t),tangent=curve.getTangentAt(t),bridge=bridgeLocal(p);
+                    if(Math.abs(bridge.x)<.84&&Math.abs(bridge.z)<.36)continue;
+                    for(const side of [-1,1]){
+                        const offset=side*.082,normal=new THREE.Vector3(-tangent.z,0,tangent.x).normalize();
+                        tiles.push({x:p.x+normal.x*offset,y:height(t,p)+.015,z:p.z+normal.z*offset,angle:Math.atan2(tangent.x,tangent.z),scale:.94+.06*Math.sin(i*2.3+side)});
+                    }
                 }
-            });
+            }
+            const shape=new THREE.Shape();
+            shape.moveTo(-.06,-.105);shape.lineTo(.06,-.105);shape.lineTo(.073,-.09);shape.lineTo(.073,.09);shape.lineTo(.06,.105);shape.lineTo(-.06,.105);shape.lineTo(-.073,.09);shape.lineTo(-.073,-.09);shape.closePath();
+            const geometry=new THREE.ExtrudeGeometry(shape,{depth:.045,bevelEnabled:false});geometry.rotateX(-Math.PI/2);
+            const stones=new THREE.InstancedMesh(geometry,new THREE.MeshStandardMaterial({color:0xffffff,roughness:.91}),tiles.length),dummy=new THREE.Object3D();
+            const palette=['#a9a18a','#b8ad91','#979784','#b4a383','#a39b85'];
+            tiles.forEach((tile,i)=>{dummy.position.set(tile.x,tile.y,tile.z);dummy.rotation.set(0,tile.angle,0);dummy.scale.set(tile.scale,1,.96);dummy.updateMatrix();stones.setMatrixAt(i,dummy.matrix);stones.setColorAt(i,new THREE.Color(palette[i%palette.length]).convertSRGBToLinear());});
+            stones.name='stone-walkways';stones.castShadow=true;stones.receiveShadow=true;mapRootGroup.add(stones);
         }
 
         // Models are authored in Blender, then merged by material for browser rendering.
@@ -723,7 +738,7 @@
             petalField=new THREE.InstancedMesh(geometry,material,count);petalField.name='settling-petals';petalField.frustumCulled=false;
             petalField.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
             const surfaces=[];mapRootGroup.updateWorldMatrix(true,true);
-            mapRootGroup.traverse(mesh=>{if(mesh.isMesh&&!mesh.isInstancedMesh&&mesh.material?.isMeshStandardMaterial&&mesh.material.visible!==false)surfaces.push(mesh);});
+            mapRootGroup.traverse(mesh=>{if(mesh.isMesh&&!mesh.isInstancedMesh&&(mesh.userData.petalSurface||(mesh.material?.isMeshStandardMaterial&&mesh.material.visible!==false)))surfaces.push(mesh);});
             petalField.userData={petals:[],surfaces,ray:new THREE.Raycaster(),dummy:new THREE.Object3D()};
             for(let i=0;i<count;i++){
                 const record={index:i,localPoint:new THREE.Vector3(),localNormal:new THREE.Vector3(),point:new THREE.Vector3(),normal:new THREE.Vector3(),flatRotation:new THREE.Quaternion(),landingRotation:new THREE.Quaternion()};
@@ -1226,12 +1241,6 @@
                 // Subtle idle breathing float on roofs/buildings
                 entry.group.position.y = entry.data.position.y + Math.sin(elapsed * 1.1 + idx) * 0.012;
                 entry.auraRing.rotation.z = elapsed * 0.6;
-            });
-
-            // Animate glowing stepping stones wave pulse
-            steppingStones.forEach(st => {
-                const pulse = (Math.sin(elapsed * 3.0 - st.phase) + 1) * 0.5;
-                st.mesh.material.emissiveIntensity = currentAtmosphere === 'night' ? .025 + pulse*.04 : 0;
             });
 
             // Animate water pond shimmer

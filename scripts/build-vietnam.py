@@ -25,7 +25,7 @@ def material(name, color, rough=.8, metal=0, glow=0):
         bs.inputs['Emission Color'].default_value=(*rgb,1); bs.inputs['Emission Strength'].default_value=glow
     m['hex']=int(color,16); m['rough']=rough; m['metal']=metal; m['glow']=glow
     materials[name]=m; return m
-for args in [('stone','c4b49b'),('stoneLight','e1d3b8'),('stoneDark','8e8e7c'),('wood','613c2a'),('woodLight','9b6940'),('woodDark','352c25'),('red','973e32'),('tile','a96042'),('tileLight','bf7f56'),('tileDark','735345'),('jade','447366'),('gold','d8ac59'),('plaster','dbad55'),('cream','eddbac'),('teal','376d61'),('leaf','54764a'),('leafLight','819657'),('leafDark','334e3d'),('moss','6c8051'),('pink','d7778c'),('pinkLight','eeb5b1'),('mai','e9bd4a'),('water','589e98'),('lotus','db91a0'),('dark','242d2a'),('karst','8a947c'),('karstLight','a4ac90')]: material(*args)
+for args in [('stone','c4b49b'),('stoneLight','e1d3b8'),('stoneDark','8e8e7c'),('wood','613c2a'),('woodLight','9b6940'),('woodDark','352c25'),('red','973e32'),('tile','a96042'),('tileLight','bf7f56'),('tileDark','735345'),('jade','447366'),('gold','d8ac59'),('plaster','dbad55'),('cream','eddbac'),('teal','376d61'),('leaf','54764a'),('leafLight','819657'),('leafDark','334e3d'),('moss','687e4e'),('pink','d7778c'),('pinkLight','eeb5b1'),('mai','e9bd4a'),('water','589e98'),('lotus','db91a0'),('dark','242d2a'),('karst','7d8377'),('karstLight','a7ac9c')]: material(*args)
 material('lantern','d7623e',.65,0,.28); material('lanternGold','f2bc61',.65,0,.22)
 material('waterShimmer','9ac7ad',.32,0,.08)
 
@@ -329,19 +329,58 @@ lantern(-1.25,.84,.69,s=.67);lantern(.06,.84,.69,s=.67)
 
 start('environment')
 def karst(x,z,r,h):
-    n=11;levels=9;verts=[]
+    n=36;levels=30;verts=[]
+    phase=random.random()*math.tau
+    def surface(t,a,extra=0):
+        cap=math.sqrt(max(0,1-max(0,(t-.84)/.16)**2))
+        shoulder=(.90+.045*math.sin(t*8+phase))*cap
+        ridges=.09*math.sin(a*7+phase)+.035*math.sin(a*13+t*3)+.014*math.sin(t*75+a*2)
+        radius=r*max(.025,shoulder+ridges*(.25+.75*cap))+extra
+        return (x+math.cos(a)*radius+math.sin(t*3.6)*r*.20,h*t-.045,z+math.sin(a)*radius*.78+math.sin(t*4+phase)*r*.08)
     for j in range(levels):
-        t=j/(levels-1);rad=r*(.85 if t<.2 else max(.07,1-.9*t**2.7));dx=math.sin(t*4)*r*.15
-        for i in range(n):
-            a=i*math.tau/n;rr=rad*(1+random.uniform(-.13,.13));verts.append((x+math.cos(a)*rr+dx,h*t-.06,z+math.sin(a)*rr*.72))
+        t=j/(levels-1)
+        for i in range(n):verts.append(surface(t,i*math.tau/n))
     faces=[]
     for j in range(levels-1):
-        for i in range(n):a=j*n+i;b=j*n+(i+1)%n;faces.extend([(a,b,b+n),(a,b+n,a+n)])
-    faces.append(tuple((levels-1)*n+i for i in range(n)));o=mesh('Limestone karst',verts,faces,'karst')
-    o.data.materials.append(materials['karstLight']);o.data.materials.append(materials['moss'])
-    for p in o.data.polygons:p.material_index=2 if p.center.z>h*.65 and p.index%4==0 else p.index%2
-    for j in range(5):
-        a=j*2.4;sphere('Cliff vegetation',(x+math.cos(a)*r*.54,h*.76+random.random()*.2,z+math.sin(a)*r*.4),(.22,.12,.21),'leafDark',1)
+        for i in range(n):
+            a=j*n+i;b=j*n+(i+1)%n;faces.append((a,b,b+n,a+n))
+    faces.extend([tuple(reversed(range(n))),tuple((levels-1)*n+i for i in range(n))])
+    obj=mesh('Weathered limestone',verts,faces,'karst')
+    for p in obj.data.polygons:p.use_smooth=True
+    tint=obj.data.color_attributes.new(name='rock_tint',type='FLOAT_COLOR',domain='POINT')
+    for j in range(levels):
+        t=j/(levels-1)
+        for i in range(n):
+            a=i*math.tau/n
+            moss=max(0,min(1,(math.sin(a*2+t*7+phase)+math.sin(a*5-t*9)+.4)*.42))*min(1,t*2)
+            shade=.89+.09*math.sin(a*6+t*13)
+            tint.data[j*n+i].color=(shade*(1-.24*moss),shade*(1-.06*moss),shade*(1-.35*moss),1)
+    rock=materials['karst'];rock['vertex_colors']=True
+    nodes=rock.node_tree.nodes
+    attribute=nodes.get('Cliff tint') or nodes.new('ShaderNodeVertexColor');attribute.name='Cliff tint';attribute.layer_name='rock_tint'
+    mix=nodes.get('Cliff tint multiply') or nodes.new('ShaderNodeMixRGB');mix.name='Cliff tint multiply';mix.blend_type='MULTIPLY';mix.inputs[0].default_value=1
+    base=rock.diffuse_color[:3];mix.inputs[1].default_value=(*(v/12.92 if v<=.04045 else ((v+.055)/1.055)**2.4 for v in base),1)
+    rock.node_tree.links.new(attribute.outputs['Color'],mix.inputs[2]);rock.node_tree.links.new(mix.outputs[0],nodes.get('Principled BSDF').inputs['Base Color'])
+    for i in range(6):
+        a=phase+i*math.tau/6
+        points=[surface(.12+j*.065,a+.025*math.sin(j*.8),.004) for j in range(12)]
+        tube('Erosion seam',points,.005*r,'stoneDark',rend=.003*r,sides=4)
+    leaf_points=[];leaf_faces=[]
+    for i in range(12):
+        a=i*2.4+phase;t=.20+random.random()*.72
+        center=Vector(surface(t,a,.01))
+        for j in range(9):
+            angle=a+j*2.4;length=random.uniform(.06,.12);width=length*.35
+            c=center+Vector((math.cos(angle)*.09,random.uniform(-.03,.07),math.sin(angle)*.07))
+            end=c+Vector((math.cos(angle)*length,length*.32,math.sin(angle)*length))
+            side=Vector((-math.sin(angle)*width,0,math.cos(angle)*width));mid=(c+end)*.5
+            offset=len(leaf_points);leaf_points.extend([tuple(c),tuple(mid+side),tuple(end),tuple(mid-side)])
+            leaf_faces.extend([(offset,offset+1,offset+2),(offset,offset+2,offset+3)])
+    mesh('Cliff fern leaves',leaf_points,leaf_faces,'leafDark')
+    for i in range(4):
+        a=phase+i*1.6
+        tube('Cliff vine',[surface(.76-j*.065,a+.035*math.sin(j),.013) for j in range(7)],.007,'moss',rend=.002,sides=4)
+
 for args in [(-6.65,.75,.65,2.5),(-6.2,1.55,.5,1.7),(-7.1,1.7,.48,1.65),(-.6,-2.5,.48,1.8),(5.6,-4.1,.72,2.6),(6.35,1.1,.54,1.9)]:karst(*args)
 tree(-6.55,0,-2.25,1.25,'pink')
 for x,z,s in [(-1.3,3.4,.63),(-.7,3.7,.49),(-1.62,3.83,.45)]:tree(x,0,z,s,'mai')
@@ -357,7 +396,7 @@ planter(-6.88,0,4.4,.14,'mai')
 # Native format avoids adding a runtime loader or a dependency.
 asset={'metadata':{'version':4.5,'type':'Object','generator':'Blender 5.2 / Linh Canh'},'geometries':[],'materials':[],'object':{'uuid':'viet-library','type':'Group','name':'Vietnam miniatures','children':[]}}
 for name,m in materials.items():
-    asset['materials'].append({'uuid':name,'type':'MeshStandardMaterial','name':name,'color':m['hex'],'roughness':m['rough'],'metalness':m['metal'],'emissive':m['hex'] if m['glow'] else 0,'emissiveIntensity':m['glow'],'side':2})
+    asset['materials'].append({'uuid':name,'type':'MeshStandardMaterial','name':name,'color':m['hex'],'roughness':m['rough'],'metalness':m['metal'],'emissive':m['hex'] if m['glow'] else 0,'emissiveIntensity':m['glow'],'side':2,'vertexColors':bool(m.get('vertex_colors',False))})
 stats={}
 deps=bpy.context.evaluated_depsgraph_get()
 for c in bpy.context.scene.collection.children:
@@ -367,19 +406,21 @@ for c in bpy.context.scene.collection.children:
         if o.type!='MESH':continue
         obj=o.evaluated_get(deps);data=obj.to_mesh();data.calc_loop_triangles();normals=data.corner_normals
         for tri in data.loop_triangles:
-            mat=data.materials[tri.material_index].name;batch=batches.setdefault(mat,{'vertices':{},'positions':[],'normals':[],'indices':[]})
+            mat=data.materials[tri.material_index].name;batch=batches.setdefault(mat,{'vertices':{},'positions':[],'normals':[],'colors':[],'hasColor':False,'indices':[]})
             for li in tri.loops:
                 co=obj.matrix_world @ data.vertices[data.loops[li].vertex_index].co
                 no=(obj.matrix_world.to_3x3().inverted().transposed() @ normals[li].vector).normalized()
-                p=tuple(round(q,4) for q in (co.x,co.z,-co.y));n=tuple(round(q,3) for q in (no.x,no.z,-no.y));key=p+n
+                p=tuple(round(q,4) for q in (co.x,co.z,-co.y));n=tuple(round(q,3) for q in (no.x,no.z,-no.y))
+                tint=data.color_attributes.get('rock_tint');color=tuple(round(v,4) for v in tint.data[data.loops[li].vertex_index].color[:3]) if tint else (1,1,1);batch['hasColor']=batch['hasColor'] or bool(tint);key=p+n+color
                 if key not in batch['vertices']:
-                    batch['vertices'][key]=len(batch['vertices']);batch['positions'].extend(p);batch['normals'].extend(n)
+                    batch['vertices'][key]=len(batch['vertices']);batch['positions'].extend(p);batch['normals'].extend(n);batch['colors'].extend(color)
                 batch['indices'].append(batch['vertices'][key])
         obj.to_mesh_clear()
     group={'uuid':c.name,'type':'Group','name':c.name,'children':[]};count=0
     for mat,b in batches.items():
         uid=c.name+'-'+mat;count+=len(b['indices'])//3
         asset['geometries'].append({'uuid':uid,'type':'BufferGeometry','data':{'attributes':{'position':{'itemSize':3,'type':'Float32Array','array':b['positions']},'normal':{'itemSize':3,'type':'Float32Array','array':b['normals']}},'index':{'type':'Uint32Array','array':b['indices']}}})
+        if b['hasColor']:asset['geometries'][-1]['data']['attributes']['color']={'itemSize':3,'type':'Float32Array','array':b['colors']}
         group['children'].append({'uuid':uid+'-mesh','type':'Mesh','name':mat,'geometry':uid,'material':mat,'castShadow':mat not in ['water','waterShimmer'],'receiveShadow':True})
     asset['object']['children'].append(group);stats[c.name]={'drawCalls':len(batches),'triangles':count}
 with open(ROOT+'/assets/models/vietnam-models.js','w',encoding='utf8') as f:f.write('/* Original Blender miniatures. Rebuild: scripts/build-vietnam.py. */\nconst VIETNAM_MODEL_DATA = '+json.dumps(asset,separators=(',',':'))+';\n')

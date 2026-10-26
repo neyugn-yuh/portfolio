@@ -25,7 +25,8 @@
         }
 
         .font-serif-oriental {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: 'Lora', 'Noto Serif', Georgia, serif;
+            line-height: 1.35;
         }
 
         /* 3D Canvas Container */
@@ -42,14 +43,11 @@
             cursor: grabbing;
         }
 
-        /* Decorative Floral Corner Overlays (like reference image) */
-        .corner-vine {
-            position: fixed;
-            pointer-events: none;
-            z-index: 15;
-            transition: filter 0.6s ease, opacity 0.6s ease;
-            filter: drop-shadow(0 8px 20px rgba(68, 38, 25, 0.25));
-        }
+        .botanical-frame { position:fixed; width:clamp(200px,22vw,285px); pointer-events:none; z-index:6; opacity:.74; }
+        .botanical-frame img { display:block; width:100%; height:auto; filter:drop-shadow(0 3px 4px #584b3820); }
+        .frame-left { top:68px; left:-100px; transform:rotate(-9deg); }
+        .frame-right { right:-85px; bottom:-145px; transform:scaleX(-1) rotate(-12deg); }
+        body[data-atmosphere=night] .botanical-frame { opacity:.42; }
 
         /* Floating 3D-tracked HTML Ribbon Labels */
         .station-label {
@@ -203,7 +201,9 @@
             header button { min-height: 40px; }
             #btn-reset-cam { padding: 9px 12px; font-size: 12px; }
             #btn-svg-drawer { padding: 9px 12px; }
-            .corner-vine { width: 110px; opacity: .65; }
+            .botanical-frame { width:155px; opacity:.62; }
+            .frame-left { left:-76px; top:76px; }
+            .frame-right { right:-62px; bottom:-96px; }
             .station-label .ribbon-pill { padding: 5px 8px; gap: 5px; border-width: 2px; }
             .station-label .ribbon-pill > span:nth-child(2) { font-size: 14px; }
             footer { bottom: max(16px, env(safe-area-inset-bottom)) !important; gap: 9px !important; }

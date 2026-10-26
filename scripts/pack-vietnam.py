@@ -14,6 +14,9 @@ def write_asset(asset, target):
         attrs['position']['array']=packed([round(v*1000) for v in attrs['position']['array']],'h')
         attrs['normal']['type']='Int8Array';attrs['normal']['normalized']=True
         attrs['normal']['array']=packed([max(-127,min(127,round(v*127))) for v in attrs['normal']['array']],'b')
+        if 'color' in attrs:
+            attrs['color']['type']='Uint8Array';attrs['color']['normalized']=True
+            attrs['color']['array']=packed([max(0,min(255,round(v*255))) for v in attrs['color']['array']],'B')
         index=geometry['data']['index'];small=max(index['array'])<65536
         index['type']='Uint16Array' if small else 'Uint32Array';index['array']=packed(index['array'],'H' if small else 'I')
     for group in asset['object']['children']:
@@ -22,7 +25,7 @@ def write_asset(asset, target):
     const data = DATA;
     const unpack = (text, type) => {
         const bytes = Uint8Array.from(atob(text), c => c.charCodeAt(0));
-        return new ({ Int16Array, Int8Array, Uint16Array, Uint32Array }[type])(bytes.buffer);
+        return new ({ Int16Array, Int8Array, Uint8Array, Uint16Array, Uint32Array }[type])(bytes.buffer);
     };
     for (const geometry of data.geometries) {
         for (const attribute of Object.values(geometry.data.attributes)) attribute.array = unpack(attribute.array, attribute.type);
