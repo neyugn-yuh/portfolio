@@ -10,6 +10,8 @@ Limestone formations use rounded shoulders, erosion grooves, smooth vertex tints
 
 Lighting defaults to the current time in `Asia/Ho_Chi_Minh`, blending dawn, daylight, sunset and night rather than jumping between presets. The clock button returns to automatic lighting after choosing a manual preview.
 
+Night adds a camera-centered star field with small soft points, depth layers and slow twinkling. Stars fade in with the night transition and disappear in daylight; reduced motion keeps them static. The star field uses one draw call and no external textures.
+
 Small curved 3D petals tumble in world space, land on the actual map or building surfaces, remain for 3–6 seconds, then fade over 1.4 seconds. All 56 petals share one instanced draw call. The notched silhouette is inspired by the [godhitech-women-day reference](https://github.com/neyugn-yuh/godhitech-women-day/tree/acdfee162f3eb1e1405d4f8c3920cc652e3bfd9c). The flower button controls the effect; reduced-motion preference disables it initially and visitors can opt in.
 
 `assets/models/vietnam-models.js` contains native Three.js ObjectLoader geometry. Models share materials and merge meshes by material: 230,550 triangles across all five stations and their surroundings, with 102 model draw calls. Tree canopies use individual folded leaves, forked branches, bark grooves, and small five-petal blossoms instead of sphere clusters. Quantized millimeter positions and normalized byte normals keep the detailed asset compact. Thumbnail art is rendered from the same Blender models.

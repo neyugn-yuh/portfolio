@@ -107,6 +107,13 @@ test('complete scene builds all five stations and supports every lighting mode',
   context.togglePetals();assert.equal(document.body.classList.contains('petals-enabled'),false);
   context.togglePetals();assert.equal(document.body.classList.contains('petals-enabled'),true);
   for (const mode of ['day', 'sunset', 'night']) context.setAtmosphere(mode);
+  assert.equal(vm.runInContext('skyStars.visible',context),true);
+  assert.ok(vm.runInContext('skyStars.material.uniforms.opacity.value',context)>.9);
+  assert.ok(vm.runInContext('skyStars.geometry.attributes.position.count >= 1000 && skyStars.geometry.attributes.position.count <= 5000',context));
+  assert.equal(vm.runInContext('skyStars.geometry.attributes.position.array.every(Number.isFinite)',context),true);
+  context.paintAtmosphere('sunset','night',.5);
+  assert.ok(vm.runInContext('skyStars.material.uniforms.opacity.value',context)>.3);
+  context.setAtmosphere('day');assert.equal(vm.runInContext('skyStars.visible',context),false);
 });
 
 test('automatic lighting follows Vietnam time, blends transitions and handles midnight', () => {

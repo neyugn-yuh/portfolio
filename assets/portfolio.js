@@ -381,7 +381,7 @@
         let stationMap = {};    // id -> { group, labelEl, auraRing, data, baseScale }
         let firefliesSystem,petalsEnabled,petalField;
         let lanternPointLights = [];
-        let waterMesh, celestialWheelGroup;
+        let waterMesh,skyStars;
         let activeStationId = null;
 
         // Smooth Camera Orbit & Fly-to Target State
@@ -429,6 +429,7 @@
 
             loadVietnamModels();
             setupLights();
+            buildNightSky();
             buildScrollTerrainAndFraming();
             buildSteppingStonePaths();
             buildAllStations3D();
@@ -439,6 +440,51 @@
 
             // Start main animation loop
             animateLoop();
+        }
+
+        function buildNightSky() {
+            const count=3200,positions=[],sizes=[],phases=[],colors=[];
+            const palette=['#d5e4ff','#f3f4ff','#ffe4c0'];
+            for(let i=0;i<count;i++) {
+                const y=Math.random()*2-1,angle=Math.random()*Math.PI*2,radius=i%5===0?52:78,r=Math.sqrt(1-y*y);
+                positions.push(Math.cos(angle)*r*radius,y*radius,Math.sin(angle)*r*radius);
+                sizes.push(i%53===0?3.8:1.1+Math.random()*1.8);phases.push(Math.random()*Math.PI*2);
+                const color=new THREE.Color(palette[i%palette.length]);colors.push(color.r,color.g,color.b);
+            }
+            const geometry=new THREE.BufferGeometry();
+            geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+            geometry.setAttribute('starSize',new THREE.Float32BufferAttribute(sizes,1));
+            geometry.setAttribute('phase',new THREE.Float32BufferAttribute(phases,1));
+            geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+            const material=new THREE.ShaderMaterial({
+                uniforms:{time:{value:0},opacity:{value:0},pixelRatio:{value:Math.min(window.devicePixelRatio||1,2)}},
+                vertexShader:`
+                    attribute float starSize;
+                    attribute float phase;
+                    attribute vec3 color;
+                    uniform float pixelRatio;
+                    varying vec3 tint;
+                    varying float sparklePhase;
+                    void main(){
+                        tint=color;sparklePhase=phase;
+                        gl_PointSize=starSize*pixelRatio;
+                        gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+                    }`,
+                fragmentShader:`
+                    uniform float time;
+                    uniform float opacity;
+                    varying vec3 tint;
+                    varying float sparklePhase;
+                    void main(){
+                        vec2 point=gl_PointCoord-vec2(.5);
+                        float glow=exp(-dot(point,point)*22.0);
+                        float twinkle=.76+.24*sin(time*(.35+.1*sin(sparklePhase))+sparklePhase);
+                        gl_FragColor=vec4(tint,glow*twinkle*opacity);
+                    }`,
+                transparent:true,depthWrite:false,depthTest:true,blending:THREE.AdditiveBlending,toneMapped:false
+            });
+            skyStars=new THREE.Points(geometry,material);skyStars.name='night-sky-stars';skyStars.frustumCulled=false;skyStars.renderOrder=-10;skyStars.visible=false;
+            scene.add(skyStars);
         }
 
         function setupLights() {
@@ -470,7 +516,7 @@
             mapRootGroup.add(pondPointLight);
         }
 
-        // 1. Build the Unfurling Oriental Parchment Scroll Base & Celestial Top Plaza
+        // Parchment terrain, walnut frame and river garden.
         function buildScrollTerrainAndFraming() {
             const loader = new THREE.TextureLoader();
             const textureReady = texture => {
@@ -507,41 +553,7 @@
             }
             buildRiverGarden();
 
-            // Bronze relief inspired by Dong Son drums, behind the miniature landscape.
-            celestialWheelGroup = new THREE.Group();
-            celestialWheelGroup.position.set(-0.4, -0.1, -5.7);
-            const bronze = new THREE.MeshStandardMaterial({ color: new THREE.Color('#826747').convertSRGBToLinear(), metalness: .45, roughness: .67 });
-            const relief = new THREE.MeshStandardMaterial({ color: new THREE.Color('#c6a66c').convertSRGBToLinear(), metalness: .5, roughness: .56 });
-            const drum = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 2.88, .25, 64), bronze);
-            drum.receiveShadow = true;
-            celestialWheelGroup.add(drum);
-            for (const radius of [.78, 1.04, 1.58, 1.78, 2.42, 2.65, 2.76]) {
-                const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, .015, 5, 64), relief);
-                ring.rotation.x = Math.PI / 2;
-                ring.position.y = .14;
-                celestialWheelGroup.add(ring);
-            }
-            const vertices = [], triangle = (a,b,c) => vertices.push(...a,...b,...c);
-            const point = (angle,radius) => [Math.cos(angle)*radius,.142,Math.sin(angle)*radius];
-            for (let i=0; i<28; i++) {
-                const angle=i*Math.PI/14, next=(i+1)*Math.PI/14;
-                triangle([0,.142,0],point(next,i%2 ? .72 : .32),point(angle,i%2 ? .32 : .72));
-            }
-            for (let i=0; i<28; i++) {
-                const angle=i*Math.PI/14;
-                triangle(point(angle-.045,2.57),point(angle,2.43),point(angle+.045,2.57));
-                triangle(point(angle-.045,1.18),point(angle,1.48),point(angle+.045,1.18));
-            }
-            for (let i=0; i<12; i++) {
-                const a=i*Math.PI/6;
-                triangle(point(a-.13,1.98),point(a+.07,2.21),point(a,1.96));
-                triangle(point(a+.07,2.21),point(a+.18,2.12),point(a,1.96));
-            }
-            const engraving = new THREE.BufferGeometry();
-            engraving.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
-            engraving.computeVertexNormals();
-            celestialWheelGroup.add(new THREE.Mesh(engraving,relief));
-            mapRootGroup.add(celestialWheelGroup);
+
         }
 
         function riverRibbon(curve,width,height) {
@@ -1110,6 +1122,11 @@
             lanternPointLights.forEach(light=>{light.intensity=.12+night*.83;});
             vietnamModelLibrary?.traverse(mesh=>{if(mesh.isMesh&&['lantern','lanternGold'].includes(mesh.material.name))mesh.material.emissiveIntensity=.28+night*1.02;});
             if(firefliesSystem)firefliesSystem.material.opacity=.08+night*.67;
+            if(skyStars){
+                const darkness=THREE.MathUtils.lerp(from==='night'?1:0,to==='night'?1:0,mix);
+                skyStars.material.uniforms.opacity.value=Math.pow(darkness,1.5)*.95;
+                skyStars.visible=darkness>.01;
+            }
             for(const mode of ['day','sunset','night','auto']) {
                 const active=mode==='auto'?automaticAtmosphere:!automaticAtmosphere&&mode===currentAtmosphere;
                 const button=document.getElementById('env-'+mode);button.classList[active?'add':'remove']('is-active');button.setAttribute('aria-pressed',String(active));
@@ -1230,6 +1247,7 @@
             camState.currentLookAt.lerp(camState.targetLookAt, 0.075);
             camera.position.copy(camState.currentPos);
             camera.lookAt(camState.currentLookAt);
+            if(skyStars){skyStars.position.copy(camera.position);skyStars.material.uniforms.time.value=elapsed;}
 
             // Animate station hover bounce & aura rings
             Object.keys(stationMap).forEach((id, idx) => {
