@@ -1,0 +1,221 @@
+
+        :root {
+            --scroll-bg: #f6efe2;
+            --wood-dark: #5c3a31;
+            --wood-light: #87594a;
+            --gold-accent: #d99b26;
+            --jade-accent: #2d8a6e;
+            --blossom-pink: #f4a49e;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #e6d7c3;
+        }
+
+        .font-serif-oriental {
+            font-family: 'Cormorant Garamond', serif;
+        }
+
+        /* 3D Canvas Container */
+        #canvas-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            cursor: grab;
+        }
+
+        #canvas-container:active {
+            cursor: grabbing;
+        }
+
+        /* Decorative Floral Corner Overlays (like reference image) */
+        .corner-vine {
+            position: fixed;
+            pointer-events: none;
+            z-index: 15;
+            transition: filter 0.6s ease, opacity 0.6s ease;
+            filter: drop-shadow(0 8px 20px rgba(68, 38, 25, 0.25));
+        }
+
+        /* Floating 3D-tracked HTML Ribbon Labels */
+        .station-label {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            pointer-events: auto;
+            cursor: pointer;
+            z-index: 12;
+            transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.28s ease;
+            will-change: left, top, transform;
+        }
+
+        .station-label:hover {
+            transform: translate(-50%, -112%) scale(1.08);
+            filter: drop-shadow(0 10px 18px rgba(92, 58, 49, 0.35));
+        }
+
+        .ribbon-pill {
+            background: linear-gradient(180deg, #fffdf9 0%, #f5ebd9 100%);
+            border: 2.5px solid #5c3a31;
+            border-radius: 14px;
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 0 #5c3a31, 0 8px 16px rgba(0,0,0,0.22);
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .ribbon-pill::before {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            border: 1px dashed rgba(135, 89, 74, 0.45);
+            border-radius: 10px;
+            pointer-events: none;
+        }
+
+        .ribbon-pill.active {
+            background: linear-gradient(180deg, #fff8e7 0%, #fce19c 100%);
+            border-color: #8c4a27;
+            box-shadow: 0 5px 0 #8c4a27, 0 0 24px rgba(245, 176, 65, 0.8);
+        }
+
+        .ribbon-arrow {
+            color: #7c5243;
+            font-size: 11px;
+            font-weight: 800;
+            transition: transform 0.25s ease;
+        }
+
+        .station-label:hover .ribbon-arrow.left {
+            transform: translateX(-3px);
+        }
+        .station-label:hover .ribbon-arrow.right {
+            transform: translateX(3px);
+        }
+
+        .ribbon-pointer {
+            width: 12px;
+            height: 12px;
+            background: #f5ebd9;
+            border-right: 2.5px solid #5c3a31;
+            border-bottom: 2.5px solid #5c3a31;
+            transform: rotate(45deg);
+            margin: -5px auto 0;
+            box-shadow: 2px 2px 0 #5c3a31;
+        }
+
+        /* Wooden Portfolio Plaque at Bottom Center */
+        .wooden-plaque {
+            background: linear-gradient(180deg, #74493d 0%, #58352c 55%, #472921 100%);
+            border: 3px solid #381e17;
+            box-shadow:
+                inset 0 2px 3px rgba(255, 223, 196, 0.35),
+                inset 0 -4px 6px rgba(25, 10, 6, 0.6),
+                0 7px 0 #2d1711,
+                0 14px 28px rgba(0, 0, 0, 0.4);
+            border-radius: 9999px;
+            position: relative;
+        }
+
+        .wooden-plaque::after {
+            content: '';
+            position: absolute;
+            inset: 5px;
+            border: 1.5px solid rgba(235, 194, 155, 0.35);
+            border-radius: 9999px;
+            pointer-events: none;
+        }
+
+        /* Parchment Modal & Cards */
+        .parchment-panel {
+            background: linear-gradient(145deg, #fdfaf3 0%, #f4ead7 100%);
+            border: 3px solid #5c3a31;
+            box-shadow: 0 12px 0 #422820, 0 25px 50px rgba(28, 15, 10, 0.55);
+        }
+
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(92, 58, 49, 0.08);
+            border-radius: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(92, 58, 49, 0.35);
+            border-radius: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(92, 58, 49, 0.6);
+        }
+
+        /* Pulse animation for SVG showcase cards */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: floatSlow 3.6s ease-in-out infinite;
+        }
+
+        #canvas-container { touch-action: none; }
+        button, a { -webkit-tap-highlight-color: transparent; }
+        button:focus-visible, a:focus-visible { outline: 3px solid #2d8a6e; outline-offset: 5px; }
+        .station-label { padding: 0; background: transparent; border: 0; }
+        .ribbon-pointer { display: block; }
+        .plaque-subtitle { color: #e8cda8; font-size: 9px; letter-spacing: .25em; margin-top: 3px; }
+        #quick-nav { display: flex; gap: 4px; pointer-events: auto; padding: 4px; border: 1px solid #87594a80; border-radius: 999px; background: #fdfaf3ed; box-shadow: 0 3px 12px #381e1720; }
+        #quick-nav button { color: #5c3a31; font-size: 11px; font-weight: 700; padding: 7px 12px; border-radius: 999px; }
+        #quick-nav button:hover { background: #ede0c9; }
+        #scene-status, .fallback-message { position: fixed; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 25; padding: 24px; max-width: 440px; width: calc(100% - 32px); text-align: center; color: #5c3a31; background: #fdfaf3; border: 2px solid #5c3a31; border-radius: 20px; box-shadow: 0 7px 0 #5c3a31; }
+        #scene-status[hidden] { display: none; }
+        .fallback-message a { display: block; margin-top: 12px; text-decoration: underline; }
+        #detail-body { user-select: text; -webkit-user-select: text; overscroll-behavior: contain; }
+        #detail-title { font-size: 21px; line-height: 1.2; }
+        #detail-badge { flex-shrink: 0; font-size: 9px; }
+        #station-detail-modal > div { min-height: 0; }
+        #station-detail-modal > div > div:first-child { flex-shrink: 0; gap: 12px; }
+        #station-detail-modal > div > div:first-child > div { flex-wrap: wrap; gap: 8px; }
+        #station-detail-modal > div > div:first-child > button { flex-shrink: 0; }
+        #station-detail-modal > div > div:last-child { flex-shrink: 0; }
+        body.detail-open header, body.detail-open footer, body.detail-open #labels-layer { visibility: hidden; }
+        .project-link { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 700; padding-top: 8px; color: #2d7158; text-decoration: underline; text-underline-offset: 3px; }
+        @media (max-width: 639px) {
+            header { top: 12px !important; left: 12px !important; right: 12px !important; gap: 8px !important; }
+            header > div { gap: 7px !important; }
+            header button { min-height: 40px; }
+            #btn-reset-cam { padding: 9px 12px; font-size: 12px; }
+            #btn-svg-drawer { padding: 9px 12px; }
+            .corner-vine { width: 110px; opacity: .65; }
+            .station-label .ribbon-pill { padding: 5px 8px; gap: 5px; border-width: 2px; }
+            .station-label .ribbon-pill > span:nth-child(2) { font-size: 14px; }
+            footer { bottom: max(16px, env(safe-area-inset-bottom)) !important; gap: 9px !important; }
+            footer > div:first-child { max-width: 310px; text-align: center; font-size: 9px; line-height: 1.5; }
+            .wooden-plaque { padding: 10px 24px; gap: 12px; }
+            .wooden-plaque h1 { font-size: 25px; white-space: nowrap; }
+            #quick-nav button { padding: 7px 9px; font-size: 10px; }
+            #station-detail-modal { inset: auto 10px 12px; width: auto; max-width: none; }
+            #station-detail-modal > div { margin: 0; max-height: calc(100dvh - 24px); }
+            #detail-body { padding: 18px; }
+            #detail-title { font-size: 20px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }

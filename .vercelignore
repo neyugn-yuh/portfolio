@@ -1,0 +1,6 @@
+.git/
+.vercel/
+node_modules/
+tests/
+README.md
+3d_oriental_map_developer_portfolio.html
