@@ -30,7 +30,8 @@ function loadPortfolio() {
     matchMedia: () => ({ matches: false }),
     addEventListener(name, handler) { this.handlers[name] = handler; }
   };
-  const context = vm.createContext({ THREE, document, window, console, requestAnimationFrame() {} });
+  const context = vm.createContext({ THREE, document, window, console, atob, setInterval() {}, requestAnimationFrame() {} });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../assets/models/vietnam-models.js'), 'utf8'), context);
   vm.runInContext(source, context);
   const container = document.getElementById('canvas-container');
   vm.runInContext('mouse = new THREE.Vector2(); camera = new THREE.PerspectiveCamera(36, 1.6, .1, 120); raycaster = new THREE.Raycaster();', context);
@@ -93,10 +94,85 @@ test('complete scene builds all five stations and supports every lighting mode',
   context.THREE = { ...THREE, WebGLRenderer: class {
     constructor() { this.shadowMap = {}; this.domElement = {}; }
     setSize() {} setPixelRatio() {} render() {}
-  } };
+  }, TextureLoader: class { load() { return new THREE.Texture(); } } };
   context.window.handlers.DOMContentLoaded();
   assert.equal(document.getElementById('scene-status').hidden, true);
   assert.equal(vm.runInContext('stationMeshes.length', context), 5);
   assert.equal(vm.runInContext('Object.keys(stationMap).length', context), 5);
+  assert.equal(vm.runInContext("stationMap.uxui.group.getObjectByName('visual').name",context),'visual');
+  assert.equal(vm.runInContext('stationMap.uxui.group.position.x',context),.4);
+  assert.equal(vm.runInContext('stationMap.uxui.group.position.z',context),.2);
+  assert.ok(vm.runInContext("scene.getObjectByName('parchment-terrain') !== undefined",context));
+  context.togglePetals();assert.equal(document.body.classList.contains('petals-enabled'),false);
+  context.togglePetals();assert.equal(document.body.classList.contains('petals-enabled'),true);
   for (const mode of ['day', 'sunset', 'night']) context.setAtmosphere(mode);
+});
+
+test('automatic lighting follows Vietnam time, blends transitions and handles midnight', () => {
+  const { context } = loadPortfolio();
+  for (const [instant, mode, clock] of [
+    ['2026-10-26T17:00:00Z', 'night', '00:00'],
+    ['2026-10-26T05:00:00Z', 'day', '12:00'],
+    ['2026-10-26T10:30:00Z', 'sunset', '17:30'],
+    ['2026-10-26T12:00:00Z', 'night', '19:00'],
+  ]) {
+    const actual=context.getLiveAtmosphere(new Date(instant));
+    assert.equal(actual.from,mode);assert.equal(actual.clock,clock);
+    assert.ok(actual.mix>=0&&actual.mix<=1);
+  }
+  const transition=context.getLiveAtmosphere(new Date('2026-10-26T09:45:00Z'));
+  assert.equal(transition.from,'day');assert.equal(transition.to,'sunset');assert.equal(transition.mix,.5);
+  context.setAtmosphere('night');assert.equal(vm.runInContext('automaticAtmosphere',context),false);
+  context.enableLiveAtmosphere();assert.equal(vm.runInContext('automaticAtmosphere',context),true);
+});
+
+test('3D petals land, remain on the surface, fade, and recycle without invalid transforms', () => {
+  const { context }=loadPortfolio();
+  const result=vm.runInContext(`
+    mapRootGroup=new THREE.Group();
+    const ground=new THREE.Mesh(new THREE.BoxGeometry(17,.1,12),new THREE.MeshStandardMaterial());
+    ground.position.y=-.05;mapRootGroup.add(ground);buildPetalField();
+    const petal=petalField.userData.petals[0];
+    petal.stage='falling';petal.y=.03;petal.speed=.4;updatePetalField(.1);
+    const landed=petal.stage;
+    petal.restDuration=3;petal.restAge=0;updatePetalField(2);
+    const held={stage:petal.stage,opacity:petalField.geometry.attributes.petalOpacity.getX(0)};
+    updatePetalField(1.7);
+    const fading=petalField.geometry.attributes.petalOpacity.getX(0);
+    updatePetalField(1);
+    ({landed,held,fading,recycled:petal.stage,count:petalField.count,finite:petalField.instanceMatrix.array.every(Number.isFinite)});
+  `,context);
+  assert.equal(result.landed,'resting');assert.equal(result.held.stage,'resting');
+  assert.ok(result.held.opacity>.9);assert.ok(result.fading>0&&result.fading<.6);
+  assert.equal(result.recycled,'falling');assert.equal(result.count,56);assert.equal(result.finite,true);
+});
+
+test('Blender models retain millimeter bounds, valid indices and a bounded render budget', () => {
+  const { context } = loadPortfolio();
+  const result = vm.runInContext(`
+    loadVietnamModels();
+    let triangles = 0, calls = 0;
+    const models = ['uxui', 'visual', 'system', 'graphic', 'contact', 'environment'].map(id => {
+      const group = vietnamModelLibrary.getObjectByName(id);
+      group.traverse(mesh => {
+        if (!mesh.isMesh) return;
+        calls++;
+        const { position, normal } = mesh.geometry.attributes;
+        if (!position.array.every(Number.isFinite) || !normal.array.every(Number.isFinite)) throw Error(id + ': invalid vertex');
+        if (!mesh.geometry.index.array.every(i => i < position.count)) throw Error(id + ': invalid index');
+        if (!normal.normalized) throw Error(id + ': missing normal normalization');
+        triangles += mesh.geometry.index.count / 3;
+      });
+      const size = new THREE.Box3().setFromObject(group).getSize(new THREE.Vector3());
+      return { id, x:size.x, y:size.y, z:size.z };
+    });
+    ({models, triangles, calls});
+  `, context);
+  assert.ok(result.calls <= 105);
+  assert.ok(result.triangles < 230000);
+  for (const model of result.models.slice(0,5)) {
+    assert.ok(model.x > 1 && model.x < 4, model.id);
+    assert.ok(model.y > 1 && model.y < 3.6, model.id);
+    assert.ok(model.z > 1 && model.z < 4, model.id);
+  }
 });

@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Justin Developer — Linh Cảnh Portfolio</title>
-    <meta name="description" content="Khám phá portfolio Justin Developer qua bản đồ 3D cổ phong: giao diện, hệ thống, dự án và kết nối.">
+    <title>Justin</title>
+    <meta name="description" content="Khám phá portfolio Justin Developer qua sa bàn kiến trúc Việt Nam 3D: giao diện, hệ thống, dự án và kết nối.">
     <meta name="theme-color" content="#e6d7c3">
-    <meta property="og:title" content="Justin Developer — Linh Cảnh Portfolio">
-    <meta property="og:description" content="Một thế giới nhỏ. Những ý tưởng lớn. Khám phá dự án của Justin qua không gian 3D tương tác.">
+    <meta property="og:title" content="Justin">
+    <meta property="og:description" content="Một thế giới nhỏ. Những ý tưởng lớn. Khám phá dự án của Justin qua sa bàn kiến trúc Việt Nam tương tác.">
     <meta property="og:type" content="website">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/assets/utilities.css">
@@ -126,8 +126,9 @@
             </button>
 
             <!-- Time of Day / Lighting Peak FX Switcher -->
-            <div class="bg-[#fdfaf3]/95 border-[2.5px] border-[#5c3a31] rounded-2xl p-1 shadow-[0_5px_0_#5c3a31] flex items-center gap-1">
-                <button onclick="setAtmosphere('day')" id="env-day" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#5c3a31] text-[#fdfaf3] flex items-center gap-1.5" title="Ban Ngày Trong Trẻo">
+            <div id="atmosphere-controls" class="bg-[#fdfaf3]/95 border-[2.5px] border-[#5c3a31] rounded-2xl p-1 shadow-[0_5px_0_#5c3a31] flex items-center gap-1">
+                <button type="button" onclick="enableLiveAtmosphere()" id="env-auto" aria-pressed="true" class="is-active" title="Ánh sáng theo giờ Việt Nam"><span id="live-clock">Tự động</span></button>
+                <button onclick="setAtmosphere('day')" id="env-day" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-[#5c3a31] flex items-center gap-1.5" title="Ban Ngày Trong Trẻo">
                     <i class="ph-fill ph-sun text-amber-300"></i>
                     <span class="hidden sm:inline">Xuân Nhật</span>
                 </button>
@@ -170,6 +171,7 @@
             <button type="button" onclick="focusStation('system')">Hệ thống</button>
             <button type="button" onclick="focusStation('graphic')">Dự án</button>
             <button type="button" onclick="focusStation('contact')">Liên hệ</button>
+            <button type="button" id="petal-toggle" onclick="togglePetals()" aria-label="Bật cánh hoa rơi" aria-pressed="false" title="Bật cánh hoa rơi">✿</button>
         </nav>
     </footer>
 
@@ -256,6 +258,7 @@
         </div>
     </div>
 
+    <script src="/assets/models/vietnam-models.js" defer></script>
     <script src="/assets/portfolio.js" defer></script>
 </body>
 </html>

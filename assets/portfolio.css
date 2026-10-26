@@ -219,3 +219,19 @@
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation: none !important; transition: none !important; }
         }
+
+.station-art { display:block; width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 5px 5px #543c231c); }
+
+#atmosphere-controls button { display:flex; align-items:center; justify-content:center; border-radius:10px; color:#5c3a31; font-size:12px; font-weight:700; transition:background .25s,color .25s; }
+#atmosphere-controls .is-active { background:#5c3a31!important; color:#fff6ea!important; box-shadow:inset 0 1px 1px #ffffff24; }
+#env-auto { padding:7px 9px; min-width:65px; gap:5px; font-variant-numeric:tabular-nums; }
+#env-auto::before { content:'◷'; font-size:14px; }
+
+@media(max-width:639px) {
+    #atmosphere-controls { gap:1px; }
+    #atmosphere-controls button { padding:6px 7px; min-width:25px; }
+    #env-auto { min-width:44px!important; font-size:10px!important; }
+    #env-auto::before { display:none; }
+}
+#quick-nav #petal-toggle { color:#aa6679; font-size:17px; padding:3px 9px; }
+#quick-nav #petal-toggle[aria-pressed=true] { background:#efd5d6; }
